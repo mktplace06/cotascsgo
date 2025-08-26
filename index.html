@@ -233,6 +233,12 @@
                         <label for="num-cotas" class="block text-sm font-medium text-gray-300">Número de Cotas</label>
                         <input type="number" id="num-cotas" value="1" min="1" max="100" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
                     </div>
+                    <div class="text-center font-bold text-lg mt-4 mb-4">
+                        Valor da Cota: <span id="ticket-price-display">R$ 0,00</span>
+                    </div>
+                    <div class="text-center font-bold text-lg mt-4 mb-4">
+                        Valor Total: <span id="total-price">R$ 0,00</span>
+                    </div>
                     <div id="buy-form-error" class="text-red-400 text-sm hidden"></div>
                     <button type="submit" id="buy-button" class="w-full bg-sky-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-sky-600 transition-colors duration-300">
                         Reservar Cotas
@@ -257,7 +263,7 @@
     <section id="admin-panel" class="py-16 md:py-20 bg-gray-950 hidden">
         <div class="container mx-auto px-4 text-center">
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-8">Painel de Administração</h2>
-            <div class="bg-gray-800 p-8 rounded-2xl shadow-lg max-w-2xl mx-auto">
+            <div class="bg-gray-800 p-8 rounded-2xl shadow-lg max-w-4xl mx-auto">
                 <form id="raffle-form" class="space-y-6 text-left mb-8">
                     <h3 class="text-xl font-bold text-white mb-2">Configuração da Rifa</h3>
                     <div>
@@ -272,9 +278,19 @@
                         <label for="form-prize-description" class="block text-sm font-medium text-gray-300">Descrição</label>
                         <textarea id="form-prize-description" rows="3" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500"></textarea>
                     </div>
-                    <div>
-                        <label for="form-total-tickets" class="block text-sm font-medium text-gray-300">Total de Cotas</label>
-                        <input type="number" id="form-total-tickets" min="1" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="form-total-tickets" class="block text-sm font-medium text-gray-300">Total de Cotas</label>
+                            <input type="number" id="form-total-tickets" min="1" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
+                        </div>
+                        <div>
+                            <label for="form-ticket-price" class="block text-sm font-medium text-gray-300">Preço da Cota (R$)</label>
+                            <input type="number" id="form-ticket-price" min="0.01" step="0.01" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
+                        </div>
+                        <div>
+                            <label for="form-pix-key" class="block text-sm font-medium text-gray-300">Chave PIX</label>
+                            <input type="text" id="form-pix-key" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
+                        </div>
                     </div>
                     <div>
                         <label for="form-features" class="block text-sm font-medium text-gray-300">Características (uma por linha)</label>
@@ -288,20 +304,13 @@
                     <div id="status-message" class="mt-4 text-center text-sm font-medium text-green-400"></div>
                 </form>
 
-                <!-- Admin form for validating tickets -->
-                <form id="validate-form" class="space-y-6 text-left">
-                    <h3 class="text-xl font-bold text-white mb-2">Validar Cota</h3>
-                    <div>
-                        <label for="validate-ticket-number" class="block text-sm font-medium text-gray-300">Número da Cota</label>
-                        <input type="number" id="validate-ticket-number" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
+                <div class="mt-8">
+                    <h3 class="text-xl font-bold text-white mb-4">Pedidos Pendentes</h3>
+                    <div id="pending-tickets-list" class="space-y-4 text-left">
+                        <!-- Pending tickets will be listed here -->
+                        <p id="no-pending-tickets" class="text-gray-400 text-center">Nenhum pedido pendente no momento.</p>
                     </div>
-                    <div class="flex justify-end">
-                        <button type="submit" class="bg-green-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-green-600 transition-colors duration-300">
-                            Validar Cota
-                        </button>
-                    </div>
-                    <div id="validate-status-message" class="mt-4 text-center text-sm font-medium text-green-400"></div>
-                </form>
+                </div>
             </div>
         </div>
     </section>
@@ -327,7 +336,7 @@
             <span class="close-button" id="close-payment-modal">&times;</span>
             <h3 class="text-xl font-bold mb-4">Pagamento via PIX</h3>
             <p class="text-gray-300 mb-4">
-                Por favor, realize o pagamento via PIX para a chave abaixo. Suas cotas serão liberadas após a confirmação.
+                Para finalizar a sua compra, realize o pagamento no valor de <span id="payment-modal-total-price" class="font-bold text-sky-400">R$ 0,00</span> para a chave PIX abaixo.
             </p>
             <div class="bg-gray-700 p-4 rounded-md mb-4">
                 <p class="font-mono text-white break-words" id="pix-key-display">
@@ -362,7 +371,7 @@
         // Importa as funções necessárias do Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, runTransaction, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, runTransaction, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global variables for Firebase configuration, provided by the environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -375,6 +384,7 @@
         let ticketsCollectionRef;
         let currentUserId;
         let isDbReady = false;
+        let raffleData = {};
 
         // Function to initialize Firebase and load raffle data
         async function initializeAppAndLoadData() {
@@ -410,12 +420,12 @@
                     // Set up real-time listeners for raffle data and tickets
                     onSnapshot(raffleDocRef, (doc) => {
                         if (doc.exists()) {
-                            const data = doc.data();
-                            console.log("Raffle data loaded:", data);
-                            updateUI(data);
-                            populateAdminForm(data);
+                            raffleData = doc.data();
+                            console.log("Raffle data loaded:", raffleData);
+                            updateUI(raffleData);
+                            populateAdminForm(raffleData);
                             // Set the max value of the number of tickets input field
-                            document.getElementById('num-cotas').max = data.totalTickets;
+                            document.getElementById('num-cotas').max = raffleData.totalTickets;
                         } else {
                             // If the document doesn't exist, create an initial one
                             console.log("No initial raffle data found. Creating a placeholder document.");
@@ -424,6 +434,8 @@
                                 imageUrl: "https://placehold.co/600x400/374151/fff?text=Imagem+do+Prêmio",
                                 description: "A sua chance de ter a skin de faca mais desejada do CS:GO 2. Cada cota pode ser a chave para o seu inventário dos sonhos!",
                                 totalTickets: 100,
+                                ticketPrice: 5.00, // New field for ticket price
+                                pixKey: "35984511700", // New field for PIX key
                                 features: [
                                     "Estilo de inspeção único e marcante",
                                     "Skin de altíssimo valor e raridade",
@@ -441,10 +453,11 @@
 
                     // Set up a real-time listener for the tickets collection
                     onSnapshot(ticketsCollectionRef, (snapshot) => {
-                        const tickets = snapshot.docs.map(doc => doc.data());
+                        const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         console.log("Tickets loaded:", tickets);
                         updateTicketProgress(tickets);
                         updateMyTickets(tickets);
+                        updatePendingTicketsAdmin(tickets);
                         isDbReady = true;
                         document.getElementById('buy-button').classList.remove('disabled-button');
                         document.getElementById('buy-button').disabled = false;
@@ -489,13 +502,32 @@
                 raffleStatus.textContent = 'O sorteio será realizado após a venda de todas as cotas!';
                 raffleStatus.classList.remove('hidden');
             }
+
+            // Update ticket price and total price calculation
+            const numCotasInput = document.getElementById('num-cotas');
+            const totalPriceSpan = document.getElementById('total-price');
+            const ticketPriceDisplay = document.getElementById('ticket-price-display');
+            const ticketPrice = data.ticketPrice || 5.00;
+
+            ticketPriceDisplay.textContent = `R$ ${ticketPrice.toFixed(2).replace('.', ',')}`;
+
+            const updatePrice = () => {
+                const updatedNumCotas = parseInt(numCotasInput.value) || 0;
+                totalPriceSpan.textContent = `R$ ${(updatedNumCotas * ticketPrice).toFixed(2).replace('.', ',')}`;
+            };
+
+            numCotasInput.addEventListener('input', updatePrice);
+            updatePrice(); // Initial call to set the price
+            
+            // Update PIX key in the modal
+            document.getElementById('pix-key-display').textContent = data.pixKey || 'chavepix@example.com';
         }
 
         // Function to update the ticket progress bar and counters
         function updateTicketProgress(tickets) {
             const loading = document.getElementById('loading-tickets');
             const progressInfo = document.getElementById('ticket-progress-info');
-            const totalTickets = parseInt(document.getElementById('form-total-tickets').value) || 100;
+            const totalTickets = raffleData.totalTickets;
             const soldTicketsCount = tickets.length;
             const remainingTicketsCount = totalTickets - soldTicketsCount;
             const percentage = (soldTicketsCount / totalTickets) * 100;
@@ -509,10 +541,7 @@
             progressInfo.classList.remove('hidden');
             
             // Re-run UI update to show correct raffle status
-            updateUI({
-                totalTickets: totalTickets,
-                // Other data is not needed for this simple status update
-            });
+            updateUI(raffleData);
         }
 
         // Function to update the user's purchased tickets
@@ -537,6 +566,39 @@
                 noTicketsMessage.classList.remove('hidden');
             }
         }
+        
+        // Function to update the pending tickets in the admin panel
+        function updatePendingTicketsAdmin(tickets) {
+            const pendingTicketsList = document.getElementById('pending-tickets-list');
+            pendingTicketsList.innerHTML = '';
+            
+            const pendingTickets = tickets.filter(ticket => ticket.status === 'pending');
+            
+            if (pendingTickets.length > 0) {
+                pendingTickets.forEach(ticket => {
+                    const ticketDiv = document.createElement('div');
+                    ticketDiv.className = 'bg-gray-700 p-4 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 shadow-md';
+                    ticketDiv.innerHTML = `
+                        <div>
+                            <p class="font-bold text-lg text-white">Cota #${String(ticket.number).padStart(4, '0')}</p>
+                            <p class="text-sm text-gray-400">Usuário: ${ticket.userId}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="validate-ticket-btn bg-green-500 text-white font-semibold px-4 py-2 rounded-full hover:bg-green-600 transition-colors duration-300" data-ticket-id="${ticket.id}">Validar</button>
+                            <button class="deny-ticket-btn bg-red-500 text-white font-semibold px-4 py-2 rounded-full hover:bg-red-600 transition-colors duration-300" data-ticket-id="${ticket.id}">Negar</button>
+                        </div>
+                    `;
+                    pendingTicketsList.appendChild(ticketDiv);
+                });
+                document.getElementById('no-pending-tickets').classList.add('hidden');
+            } else {
+                const noTicketsMessage = document.createElement('p');
+                noTicketsMessage.id = 'no-pending-tickets';
+                noTicketsMessage.className = 'text-gray-400 text-center';
+                noTicketsMessage.textContent = 'Nenhum pedido pendente no momento.';
+                pendingTicketsList.appendChild(noTicketsMessage);
+            }
+        }
 
         // Function to pre-fill the form with current data
         function populateAdminForm(data) {
@@ -544,6 +606,8 @@
             document.getElementById('form-prize-image-url').value = data.imageUrl || '';
             document.getElementById('form-prize-description').value = data.description || '';
             document.getElementById('form-total-tickets').value = data.totalTickets || 100;
+            document.getElementById('form-ticket-price').value = data.ticketPrice || 5.00; // Populate new field
+            document.getElementById('form-pix-key').value = data.pixKey || ''; // Populate new field
             document.getElementById('form-features').value = (data.features || []).join('\n');
         }
 
@@ -560,6 +624,8 @@
             const imageUrl = document.getElementById('form-prize-image-url').value;
             const description = document.getElementById('form-prize-description').value;
             const totalTickets = parseInt(document.getElementById('form-total-tickets').value);
+            const ticketPrice = parseFloat(document.getElementById('form-ticket-price').value);
+            const pixKey = document.getElementById('form-pix-key').value;
             const features = document.getElementById('form-features').value.split('\n').map(f => f.trim()).filter(f => f);
 
             const updatedData = {
@@ -567,6 +633,8 @@
                 imageUrl,
                 description,
                 totalTickets,
+                ticketPrice,
+                pixKey,
                 features
             };
 
@@ -582,55 +650,36 @@
             }
         }
         
-        // Handle validation form submission
-        async function handleValidateFormSubmit(event) {
-            event.preventDefault();
-            
+        // Handle validation button click
+        async function handleValidateTicket(ticketId) {
             if (!isDbReady) {
-                document.getElementById('validate-status-message').textContent = 'Erro: Banco de dados não está pronto.';
-                document.getElementById('validate-status-message').classList.add('text-red-400');
+                console.error('Erro: Banco de dados não está pronto.');
                 return;
             }
-
-            const ticketNumber = parseInt(document.getElementById('validate-ticket-number').value);
-            const statusMessage = document.getElementById('validate-status-message');
-
-            if (isNaN(ticketNumber) || ticketNumber <= 0) {
-                statusMessage.textContent = 'Por favor, insira um número de cota válido.';
-                statusMessage.classList.add('text-red-400');
-                statusMessage.classList.remove('text-green-400');
-                return;
-            }
-            
             try {
-                const q = query(ticketsCollectionRef, where("number", "==", ticketNumber));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    statusMessage.textContent = `Cota #${ticketNumber} não encontrada.`;
-                    statusMessage.classList.add('text-red-400');
-                    statusMessage.classList.remove('text-green-400');
-                    return;
-                }
-
-                await runTransaction(db, async (transaction) => {
-                    querySnapshot.forEach(doc => {
-                        const ticketRef = doc.ref;
-                        transaction.update(ticketRef, { status: 'validated' });
-                    });
-                });
-                
-                statusMessage.textContent = `Cota #${ticketNumber} validada com sucesso!`;
-                statusMessage.classList.remove('text-red-400');
-                statusMessage.classList.add('text-green-400');
-                
+                const ticketRef = doc(ticketsCollectionRef, ticketId);
+                await setDoc(ticketRef, { status: 'validated' }, { merge: true });
+                console.log(`Cota #${ticketId} validada com sucesso!`);
             } catch (error) {
                 console.error("Erro ao validar a cota:", error);
-                statusMessage.textContent = `Erro ao validar a cota: ${error.message}`;
-                statusMessage.classList.add('text-red-400');
-                statusMessage.classList.remove('text-green-400');
             }
         }
+        
+        // Handle deny button click
+        async function handleDenyTicket(ticketId) {
+            if (!isDbReady) {
+                console.error('Erro: Banco de dados não está pronto.');
+                return;
+            }
+            try {
+                const ticketRef = doc(ticketsCollectionRef, ticketId);
+                await deleteDoc(ticketRef);
+                console.log(`Cota #${ticketId} negada e removida.`);
+            } catch (error) {
+                console.error("Erro ao negar a cota:", error);
+            }
+        }
+
 
         // Handle ticket purchase form submission
         async function handleBuyFormSubmit(event) {
@@ -645,7 +694,7 @@
             const numCotasInput = document.getElementById('num-cotas');
             const numCotas = parseInt(numCotasInput.value);
             const errorMessage = document.getElementById('buy-form-error');
-            const totalTickets = parseInt(document.getElementById('form-total-tickets').value);
+            const totalTickets = raffleData.totalTickets;
 
             if (isNaN(numCotas) || numCotas <= 0 || numCotas > totalTickets) {
                 errorMessage.textContent = `Por favor, insira um número entre 1 e ${totalTickets}.`;
@@ -688,7 +737,9 @@
                         transaction.set(newDocRef, ticket);
                     });
                 });
-
+                
+                const totalPayment = numCotas * raffleData.ticketPrice;
+                document.getElementById('payment-modal-total-price').textContent = `R$ ${totalPayment.toFixed(2).replace('.', ',')}`;
                 document.getElementById('payment-modal').style.display = 'block';
                 console.log("Cotas salvas com sucesso no banco de dados.");
             } catch (error) {
@@ -707,10 +758,21 @@
                 adminForm.addEventListener('submit', handleAdminFormSubmit);
             }
             
-            const validateForm = document.getElementById('validate-form');
-            if (validateForm) {
-                validateForm.addEventListener('submit', handleValidateFormSubmit);
-            }
+            // Event delegation for dynamically created buttons in admin panel
+            document.getElementById('admin-panel').addEventListener('click', (e) => {
+                if (e.target.classList.contains('validate-ticket-btn')) {
+                    const ticketId = e.target.getAttribute('data-ticket-id');
+                    if (confirm(`Tem certeza que deseja validar a cota ${ticketId}?`)) {
+                        handleValidateTicket(ticketId);
+                    }
+                }
+                if (e.target.classList.contains('deny-ticket-btn')) {
+                    const ticketId = e.target.getAttribute('data-ticket-id');
+                    if (confirm(`Tem certeza que deseja negar e remover a cota ${ticketId}?`)) {
+                        handleDenyTicket(ticketId);
+                    }
+                }
+            });
 
             const buyForm = document.getElementById('buy-form');
             if (buyForm) {

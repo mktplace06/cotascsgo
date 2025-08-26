@@ -402,9 +402,20 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, runTransaction, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // *** CÓDIGO DE CONFIGURAÇÃO DO FIREBASE (FORNECIDO PELO USUÁRIO) ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdHnd_3O6zgdwwnStYGcXLwuZFyNpxwpE",
+            authDomain: "cotascsgo.firebaseapp.com",
+            projectId: "cotascsgo",
+            storageBucket: "cotascsgo.firebasestorage.app",
+            messagingSenderId: "769528538016",
+            appId: "1:769528538016:web:62436677e3e42134b4fac5",
+            measurementId: "G-NGGV9X6FJ3"
+        };
+        // *** FIM DO CÓDIGO DE CONFIGURAÇÃO DO FIREBASE ***
+
         // Global variables for Firebase configuration, provided by the environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let db;
@@ -414,13 +425,12 @@
         let currentUserId;
         let isDbReady = false;
         let raffleData = {};
-        let isAuthReady = false;
 
         // Function to initialize Firebase and load raffle data
         async function initializeAppAndLoadData() {
             try {
-                // Initialize Firebase app only if config is available
-                if (firebaseConfig) {
+                // Initialize Firebase app with the provided config
+                if (firebaseConfig.projectId) {
                     const app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);

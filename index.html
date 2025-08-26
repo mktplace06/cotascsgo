@@ -94,6 +94,10 @@
         .hidden {
             display: none;
         }
+        .disabled-button {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -230,7 +234,7 @@
                         <input type="number" id="num-cotas" value="1" min="1" max="100" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-700 text-white p-3 focus:border-sky-500 focus:ring-sky-500">
                     </div>
                     <div id="buy-form-error" class="text-red-400 text-sm hidden"></div>
-                    <button type="submit" class="w-full bg-sky-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-sky-600 transition-colors duration-300">
+                    <button type="submit" id="buy-button" class="w-full bg-sky-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-sky-600 transition-colors duration-300">
                         Reservar Cotas
                     </button>
                 </form>
@@ -370,6 +374,7 @@
         let raffleDocRef;
         let ticketsCollectionRef;
         let currentUserId;
+        let isDbReady = false;
 
         // Function to initialize Firebase and load raffle data
         async function initializeAppAndLoadData() {
@@ -440,6 +445,9 @@
                         console.log("Tickets loaded:", tickets);
                         updateTicketProgress(tickets);
                         updateMyTickets(tickets);
+                        isDbReady = true;
+                        document.getElementById('buy-button').classList.remove('disabled-button');
+                        document.getElementById('buy-button').disabled = false;
                     }, (error) => {
                         console.error("Error listening to tickets collection changes:", error);
                     });
@@ -542,9 +550,9 @@
         // Handle admin form submission
         async function handleAdminFormSubmit(event) {
             event.preventDefault();
-            
-            if (!raffleDocRef) {
-                document.getElementById('status-message').textContent = 'Erro: Banco de dados não inicializado.';
+
+            if (!isDbReady) {
+                document.getElementById('status-message').textContent = 'Erro: Banco de dados não está pronto.';
                 return;
             }
             
@@ -578,18 +586,17 @@
         async function handleValidateFormSubmit(event) {
             event.preventDefault();
             
+            if (!isDbReady) {
+                document.getElementById('validate-status-message').textContent = 'Erro: Banco de dados não está pronto.';
+                document.getElementById('validate-status-message').classList.add('text-red-400');
+                return;
+            }
+
             const ticketNumber = parseInt(document.getElementById('validate-ticket-number').value);
             const statusMessage = document.getElementById('validate-status-message');
 
             if (isNaN(ticketNumber) || ticketNumber <= 0) {
                 statusMessage.textContent = 'Por favor, insira um número de cota válido.';
-                statusMessage.classList.add('text-red-400');
-                statusMessage.classList.remove('text-green-400');
-                return;
-            }
-            
-            if (!db || !ticketsCollectionRef) {
-                statusMessage.textContent = 'Erro: O banco de dados não está pronto.';
                 statusMessage.classList.add('text-red-400');
                 statusMessage.classList.remove('text-green-400');
                 return;
@@ -628,6 +635,12 @@
         // Handle ticket purchase form submission
         async function handleBuyFormSubmit(event) {
             event.preventDefault();
+
+            if (!isDbReady) {
+                document.getElementById('buy-form-error').textContent = 'Erro: Banco de dados não está pronto.';
+                document.getElementById('buy-form-error').classList.remove('hidden');
+                return;
+            }
             
             const numCotasInput = document.getElementById('num-cotas');
             const numCotas = parseInt(numCotasInput.value);
@@ -642,12 +655,6 @@
                 errorMessage.classList.add('hidden');
             }
 
-            if (!db || !ticketsCollectionRef) {
-                errorMessage.textContent = 'Erro: O banco de dados não está pronto.';
-                errorMessage.classList.remove('hidden');
-                return;
-            }
-            
             try {
                 // Now, generate and save the tickets
                 await runTransaction(db, async (transaction) => {
@@ -709,6 +716,9 @@
             if (buyForm) {
                 buyForm.addEventListener('submit', handleBuyFormSubmit);
             }
+            
+            document.getElementById('buy-button').classList.add('disabled-button');
+            document.getElementById('buy-button').disabled = true;
 
             // Admin panel access logic
             const adminAccessIcon = document.getElementById('admin-access-icon');

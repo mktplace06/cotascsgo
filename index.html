@@ -324,6 +324,18 @@
             </div>
         </div>
     </section>
+    
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content max-w-sm">
+            <h3 class="text-xl font-bold mb-4" id="confirmation-title">Confirmar Ação</h3>
+            <p class="text-gray-300 mb-6" id="confirmation-message">Tem certeza que deseja continuar?</p>
+            <div class="flex justify-between space-x-4">
+                <button id="confirm-yes-btn" class="w-full bg-green-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-green-600 transition-colors duration-300">Sim</button>
+                <button id="confirm-no-btn" class="w-full bg-red-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-red-600 transition-colors duration-300">Não</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Admin Login Modal -->
     <div id="admin-login-modal" class="modal">
@@ -370,8 +382,6 @@
         <div class="container mx-auto px-4 text-center">
             <p class="text-gray-400 mb-4">&copy; 2025 Cotas CSGO. Todos os direitos reservados.</p>
             <div class="flex justify-center space-x-4">
-                <a href="https://www.instagram.com" target="_blank" class="text-gray-400 hover:text-white transition-colors duration-300">Instagram</a>
-                <a href="https://www.facebook.com" target="_blank" class="text-gray-400 hover:text-white transition-colors duration-300">Facebook</a>
                 <a href="https://api.whatsapp.com/send?phone=35984511700" target="_blank" class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-700 hover:bg-green-500 transition-colors duration-300">
                     <svg class="social-icon text-white" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12.04 2.1c-5.46 0-9.9 4.44-9.9 9.9 0 1.77.47 3.45 1.37 4.95L2.1 21.9l5.12-1.35c1.45.79 3.09 1.25 4.82 1.25 5.46 0 9.9-4.44 9.9-9.9C21.94 6.54 17.5 2.1 12.04 2.1zm5.55 14.54c-.22.56-.9.84-1.63.46-.73-.39-4.52-2.18-5.28-2.45-.75-.27-.58-.39-.4-.57.18-.18.4-.42.6-.68.2-.27.27-.47.18-.68-.09-.2-.33-.56-.49-.78-.17-.22-.14-.2-.25-.45-.11-.25-.9-.83-.9-1.02-.02-.2-.59-.19-.77-.19-.17 0-.36-.02-.55-.02-.2 0-.5.06-.72.33-.23.27-.88.86-.88 2.1 0 1.23.91 2.45 1.04 2.62.14.18 1.83 2.8 4.42 3.75 2.59.94 2.59.62 3.06.58.48-.04 1.2-.49 1.38-1.07.18-.58.18-.53.12-.66-.05-.13-.23-.23-.48-.36z"/>
@@ -390,7 +400,7 @@
         // Importa as funções necessárias do Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, runTransaction, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, runTransaction, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global variables for Firebase configuration, provided by the environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -569,7 +579,8 @@
             const noTicketsMessage = document.getElementById('no-tickets-message');
             myTicketsList.innerHTML = '';
             
-            const myTickets = tickets.filter(ticket => ticket.userId === currentUserId);
+            // Filter tickets for the current user that have been validated
+            const myTickets = tickets.filter(ticket => ticket.userId === currentUserId && ticket.status === 'validated');
             
             if (myTickets.length > 0) {
                 myTickets.forEach(ticket => {
@@ -669,19 +680,49 @@
             }
         }
         
+        // Confirmation modal logic
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmTitle = document.getElementById('confirmation-title');
+        const confirmMessage = document.getElementById('confirmation-message');
+        const confirmYesBtn = document.getElementById('confirm-yes-btn');
+        const confirmNoBtn = document.getElementById('confirm-no-btn');
+
+        function showConfirmationModal(title, message, onConfirm) {
+            confirmTitle.textContent = title;
+            confirmMessage.textContent = message;
+            confirmationModal.style.display = 'block';
+
+            confirmYesBtn.onclick = () => {
+                onConfirm(true);
+                confirmationModal.style.display = 'none';
+            };
+            confirmNoBtn.onclick = () => {
+                onConfirm(false);
+                confirmationModal.style.display = 'none';
+            };
+        }
+
         // Handle validation button click
         async function handleValidateTicket(ticketId) {
             if (!isDbReady) {
                 console.error('Erro: Banco de dados não está pronto.');
                 return;
             }
-            try {
-                const ticketRef = doc(ticketsCollectionRef, ticketId);
-                await setDoc(ticketRef, { status: 'validated' }, { merge: true });
-                console.log(`Cota #${ticketId} validada com sucesso!`);
-            } catch (error) {
-                console.error("Erro ao validar a cota:", error);
-            }
+            showConfirmationModal(
+                'Confirmar Validação',
+                `Tem certeza que deseja validar a cota #${ticketId}?`,
+                async (result) => {
+                    if (result) {
+                        try {
+                            const ticketRef = doc(ticketsCollectionRef, ticketId);
+                            await setDoc(ticketRef, { status: 'validated' }, { merge: true });
+                            console.log(`Cota #${ticketId} validada com sucesso!`);
+                        } catch (error) {
+                            console.error("Erro ao validar a cota:", error);
+                        }
+                    }
+                }
+            );
         }
         
         // Handle deny button click
@@ -690,22 +731,39 @@
                 console.error('Erro: Banco de dados não está pronto.');
                 return;
             }
-            try {
-                const ticketRef = doc(ticketsCollectionRef, ticketId);
-                await deleteDoc(ticketRef);
-                console.log(`Cota #${ticketId} negada e removida.`);
-            } catch (error) {
-                console.error("Erro ao negar a cota:", error);
-            }
+            showConfirmationModal(
+                'Confirmar Negação',
+                `Tem certeza que deseja negar e remover a cota #${ticketId}?`,
+                async (result) => {
+                    if (result) {
+                        try {
+                            const ticketRef = doc(ticketsCollectionRef, ticketId);
+                            await deleteDoc(ticketRef);
+                            // Show a temporary message to the admin
+                            const statusMessage = document.getElementById('status-message');
+                            statusMessage.textContent = 'Pedido negado e removido.';
+                            statusMessage.classList.remove('text-green-400');
+                            statusMessage.classList.add('text-red-400');
+                            setTimeout(() => {
+                                statusMessage.textContent = '';
+                                statusMessage.classList.remove('text-red-400');
+                            }, 3000);
+                            console.log(`Cota #${ticketId} negada e removida.`);
+                        } catch (error) {
+                            console.error("Erro ao negar a cota:", error);
+                        }
+                    }
+                }
+            );
         }
-
 
         // Handle ticket purchase form submission
         async function handleBuyFormSubmit(event) {
             event.preventDefault();
 
+            // A small delay to ensure isDbReady is correctly set
             if (!isDbReady) {
-                document.getElementById('buy-form-error').textContent = 'Erro: Banco de dados não está pronto.';
+                document.getElementById('buy-form-error').textContent = 'Erro: O site ainda está a ser carregado. Por favor, tente novamente em alguns segundos.';
                 document.getElementById('buy-form-error').classList.remove('hidden');
                 return;
             }
@@ -715,6 +773,14 @@
             const errorMessage = document.getElementById('buy-form-error');
             const totalTickets = raffleData.totalTickets;
 
+            // Check if there are enough tickets before starting the transaction
+            const soldTickets = document.getElementById('tickets-sold-count').textContent;
+            if (numCotas + parseInt(soldTickets) > totalTickets) {
+                 errorMessage.textContent = `Não há cotas suficientes disponíveis para a sua compra. Restam apenas ${totalTickets - soldTickets} cotas.`;
+                 errorMessage.classList.remove('hidden');
+                 return;
+            }
+            
             if (isNaN(numCotas) || numCotas <= 0 || numCotas > totalTickets) {
                 errorMessage.textContent = `Por favor, insira um número entre 1 e ${totalTickets}.`;
                 errorMessage.classList.remove('hidden');
@@ -726,6 +792,11 @@
             try {
                 // Now, generate and save the tickets
                 await runTransaction(db, async (transaction) => {
+                    // Check if the collection reference is available before proceeding
+                    if (!ticketsCollectionRef) {
+                         throw new Error("A referência da coleção de cotas não está definida.");
+                    }
+                    
                     const ticketsQuery = await transaction.get(ticketsCollectionRef);
                     const soldTicketNumbers = new Set(ticketsQuery.docs.map(doc => doc.data().number));
                     
@@ -781,15 +852,11 @@
             document.getElementById('admin-panel').addEventListener('click', (e) => {
                 if (e.target.classList.contains('validate-ticket-btn')) {
                     const ticketId = e.target.getAttribute('data-ticket-id');
-                    if (confirm(`Tem certeza que deseja validar a cota ${ticketId}?`)) {
-                        handleValidateTicket(ticketId);
-                    }
+                    handleValidateTicket(ticketId);
                 }
                 if (e.target.classList.contains('deny-ticket-btn')) {
                     const ticketId = e.target.getAttribute('data-ticket-id');
-                    if (confirm(`Tem certeza que deseja negar e remover a cota ${ticketId}?`)) {
-                        handleDenyTicket(ticketId);
-                    }
+                    handleDenyTicket(ticketId);
                 }
             });
 
@@ -839,20 +906,26 @@
                 if (event.target === adminLoginModal) {
                     adminLoginModal.style.display = 'none';
                 }
+                if (event.target === confirmationModal) {
+                    confirmationModal.style.display = 'none';
+                }
             };
             
             // Copy to clipboard functionality
             document.getElementById('copy-pix-key').onclick = () => {
                 const pixKey = document.getElementById('pix-key-display').textContent;
-                document.execCommand('copy');
-                const copiedMessage = document.getElementById('copied-message');
-                copiedMessage.classList.remove('hidden');
-                setTimeout(() => {
-                    copiedMessage.classList.add('hidden');
-                }, 2000);
+                // Use navigator.clipboard.writeText for modern and more reliable clipboard access
+                navigator.clipboard.writeText(pixKey).then(() => {
+                    const copiedMessage = document.getElementById('copied-message');
+                    copiedMessage.classList.remove('hidden');
+                    setTimeout(() => {
+                        copiedMessage.classList.add('hidden');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
             };
         });
-
     </script>
 </body>
 </html>

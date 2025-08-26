@@ -414,6 +414,7 @@
         let currentUserId;
         let isDbReady = false;
         let raffleData = {};
+        let isAuthReady = false;
 
         // Function to initialize Firebase and load raffle data
         async function initializeAppAndLoadData() {
@@ -424,74 +425,70 @@
                     db = getFirestore(app);
                     auth = getAuth(app);
 
-                    // Sign in anonymously if no auth token is provided
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    // Set up an auth state change listener
+                    auth.onAuthStateChanged(async (user) => {
+                        if (user) {
+                            currentUserId = user.uid;
+                            document.getElementById('user-id').textContent = currentUserId;
 
-                    // Get the user ID after successful sign-in
-                    currentUserId = auth.currentUser?.uid;
+                            // Define Firestore paths after auth is ready
+                            const raffleDocPath = `/artifacts/${appId}/public/data/raffle_configs/main_raffle`;
+                            raffleDocRef = doc(db, raffleDocPath);
+                            ticketsCollectionRef = collection(db, `${raffleDocPath}/tickets`);
 
-                    if (!currentUserId) {
-                        console.error("User ID not available after authentication.");
-                        return;
-                    }
-                    
-                    document.getElementById('user-id').textContent = currentUserId;
+                            // Set up real-time listeners
+                            onSnapshot(raffleDocRef, (doc) => {
+                                if (doc.exists()) {
+                                    raffleData = doc.data();
+                                    console.log("Raffle data loaded:", raffleData);
+                                    updateUI(raffleData);
+                                    populateAdminForm(raffleData);
+                                    document.getElementById('num-cotas').max = raffleData.totalTickets;
+                                } else {
+                                    console.log("No initial raffle data found. Creating a placeholder document.");
+                                    const initialData = {
+                                        prizeName: "Karambit | Doppler",
+                                        imageUrl: "https://placehold.co/600x400/374151/fff?text=Imagem+do+Prêmio",
+                                        description: "A sua chance de ter a skin de faca mais desejada do CS:GO 2. Cada cota pode ser a chave para o seu inventário dos sonhos!",
+                                        totalTickets: 100,
+                                        ticketPrice: 5.00,
+                                        pixKey: "35984511700",
+                                        features: [
+                                            "Estilo de inspeção único e marcante",
+                                            "Skin de altíssimo valor e raridade",
+                                            "Combina com qualquer luva do jogo",
+                                            "Versão Factory New, com 0.01 de float"
+                                        ]
+                                    };
+                                    setDoc(raffleDocRef, initialData)
+                                        .then(() => console.log("Initial document created successfully."))
+                                        .catch((error) => console.error("Error creating initial document:", error));
+                                }
+                            }, (error) => {
+                                console.error("Error listening to raffle document changes:", error);
+                            });
 
-                    // Define the path to the raffle document with an even number of segments, as required by Firestore.
-                    const raffleDocPath = `/artifacts/${appId}/public/data/raffle_configs/main_raffle`;
-                    raffleDocRef = doc(db, raffleDocPath);
-                    ticketsCollectionRef = collection(db, `${raffleDocPath}/tickets`);
+                            onSnapshot(ticketsCollectionRef, (snapshot) => {
+                                const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                                console.log("Tickets loaded:", tickets);
+                                updateTicketProgress(tickets);
+                                updateMyTickets(tickets);
+                                updatePendingTicketsAdmin(tickets);
+                                isDbReady = true;
+                                document.getElementById('buy-button').classList.remove('disabled-button');
+                                document.getElementById('buy-button').disabled = false;
+                            }, (error) => {
+                                console.error("Error listening to tickets collection changes:", error);
+                            });
 
-                    // Set up real-time listeners for raffle data and tickets
-                    onSnapshot(raffleDocRef, (doc) => {
-                        if (doc.exists()) {
-                            raffleData = doc.data();
-                            console.log("Raffle data loaded:", raffleData);
-                            updateUI(raffleData);
-                            populateAdminForm(raffleData);
-                            // Set the max value of the number of tickets input field
-                            document.getElementById('num-cotas').max = raffleData.totalTickets;
                         } else {
-                            // If the document doesn't exist, create an initial one
-                            console.log("No initial raffle data found. Creating a placeholder document.");
-                            const initialData = {
-                                prizeName: "Karambit | Doppler",
-                                imageUrl: "https://placehold.co/600x400/374151/fff?text=Imagem+do+Prêmio",
-                                description: "A sua chance de ter a skin de faca mais desejada do CS:GO 2. Cada cota pode ser a chave para o seu inventário dos sonhos!",
-                                totalTickets: 100,
-                                ticketPrice: 5.00, // New field for ticket price
-                                pixKey: "35984511700", // New field for PIX key
-                                features: [
-                                    "Estilo de inspeção único e marcante",
-                                    "Skin de altíssimo valor e raridade",
-                                    "Combina com qualquer luva do jogo",
-                                    "Versão Factory New, com 0.01 de float"
-                                ]
-                            };
-                            setDoc(raffleDocRef, initialData)
-                                .then(() => console.log("Initial document created successfully."))
-                                .catch((error) => console.error("Error creating initial document:", error));
+                            // Sign in the user if they are not already signed in
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
                         }
-                    }, (error) => {
-                        console.error("Error listening to raffle document changes:", error);
-                    });
-
-                    // Set up a real-time listener for the tickets collection
-                    onSnapshot(ticketsCollectionRef, (snapshot) => {
-                        const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        console.log("Tickets loaded:", tickets);
-                        updateTicketProgress(tickets);
-                        updateMyTickets(tickets);
-                        updatePendingTicketsAdmin(tickets);
-                        isDbReady = true;
-                        document.getElementById('buy-button').classList.remove('disabled-button');
-                        document.getElementById('buy-button').disabled = false;
-                    }, (error) => {
-                        console.error("Error listening to tickets collection changes:", error);
                     });
 
                 } else {
